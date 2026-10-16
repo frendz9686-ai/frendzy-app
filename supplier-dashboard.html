@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frendzy - Supplier Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 font-sans text-gray-800">
+
+    <div class="max-w-md mx-auto bg-gray-50 min-h-screen shadow-2xl relative pb-20 overflow-hidden">
+        
+        <!-- Header -->
+        <header class="bg-indigo-800 text-white p-5 rounded-b-3xl shadow-md flex justify-between items-center sticky top-0 z-40">
+            <div>
+                <h2 class="font-bold text-xl" id="headerShopName"><i class="fas fa-store mr-2"></i>Supplier Portal</h2>
+                <p class="text-indigo-200 text-xs mt-1">Manage your Agri-Inputs store</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <select id="langSwitcher" onchange="changeLanguage(this.value)" class="bg-white/20 text-white border border-white/30 rounded-lg px-2 py-1 text-xs font-bold outline-none cursor-pointer">
+                    <option value="en" class="text-gray-900">EN</option>
+                    <option value="hi" class="text-gray-900">HI</option>
+                    <option value="kn" class="text-gray-900">KN</option>
+                </select>
+                <button onclick="clearSession()" id="logoutBtn" class="hidden text-xs bg-indigo-900 px-3 py-1.5 rounded-full hover:bg-indigo-700 transition shadow">Logout</button>
+            </div>
+        </header>
+
+        <!-- VIEW 0: AUTHENTICATION GATEWAY -->
+        <div id="authView" class="p-5 mt-4 block">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <div class="flex bg-gray-100 rounded-xl p-1 mb-6">
+                    <button onclick="switchAuthTab('login')" id="tabLogin" class="flex-1 py-2 text-sm font-bold bg-white text-indigo-700 rounded-lg shadow-sm transition">Login</button>
+                    <button onclick="switchAuthTab('setup')" id="tabSetup" class="flex-1 py-2 text-sm font-bold text-gray-500 rounded-lg transition">Setup Store</button>
+                </div>
+
+                <form id="loginForm" class="space-y-4 block">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">Phone Number</label>
+                        <input type="tel" id="loginPhone" required placeholder="10-digit number" class="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-600 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">4-Digit PIN</label>
+                        <input type="password" id="loginPin" required maxlength="4" placeholder="••••" class="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-600 outline-none tracking-widest text-center">
+                    </div>
+                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl shadow-md transition">Login to Dashboard</button>
+                    <p id="loginStatus" class="text-xs text-red-500 font-bold text-center mt-2 hidden">Invalid credentials or store not found</p>
+                </form>
+
+                <div id="otpForm" class="space-y-4 hidden">
+                    <div id="otpStep1">
+                        <label class="block text-xs font-bold text-gray-700 mb-1">Register Phone Number</label>
+                        <input type="tel" id="setupPhone" required placeholder="10-digit number" class="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-600 outline-none mb-3">
+                        <button type="button" onclick="triggerOTP()" class="w-full bg-gray-900 text-white font-bold py-3 rounded-xl shadow-md transition">Send OTP</button>
+                    </div>
+                    <div id="otpStep2" class="hidden space-y-4 border-t border-gray-100 pt-4 mt-2">
+                        <div>
+                            <label class="block text-xs font-bold text-green-700 mb-1">Enter OTP (Sent via SMS)</label>
+                            <input type="number" id="setupOtp" placeholder="Enter 1234" class="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-green-600 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-indigo-700 mb-1">Create Security PIN</label>
+                            <input type="password" id="setupPin" maxlength="4" placeholder="••••" class="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-600 outline-none tracking-widest text-center">
+                        </div>
+                        <button type="button" onclick="verifyOTPAndProceed()" class="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-xl shadow-md">Verify & Continue Setup</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW 1: SHOP SETUP ONBOARDING -->
+        <div id="setupView" class="p-5 mt-2 hidden">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <h3 class="font-bold text-gray-900 text-lg mb-1">Complete Store Profile</h3>
+                <form id="onboardForm" class="space-y-4 mt-4">
+                    <input type="text" id="shopName" required placeholder="Shop Name" class="w-full border rounded-lg p-2.5 text-sm">
+                    <input type="text" id="ownerName" required placeholder="Owner Name" class="w-full border rounded-lg p-2.5 text-sm">
+                    <textarea id="shopAddress" required placeholder="Address" class="w-full border rounded-lg p-2.5 text-sm" rows="2"></textarea>
+                    <div class="flex gap-2">
+                        <input type="text" id="shopLocation" required placeholder="Location Area" class="flex-1 border rounded-lg p-2.5 text-sm">
+                        <button type="button" onclick="detectLocation()" id="gpsBtn" class="bg-indigo-100 text-indigo-700 px-4 rounded-lg text-sm font-bold"><i class="fas fa-map-marker-alt"></i></button>
+                    </div>
+                    <input type="hidden" id="shopLat"><input type="hidden" id="shopLng">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-2">Accepted Payment Methods</label>
+                        <div class="space-y-2">
+                            <label class="flex items-center"><input type="checkbox" value="Cash" class="pay-method mr-2 text-indigo-600"> Cash / COD</label>
+                            <label class="flex items-center"><input type="checkbox" value="Pay at Shop" class="pay-method mr-2 text-indigo-600"> Pay at Shop</label>
+                            <label class="flex items-center"><input type="checkbox" value="Through App" class="pay-method mr-2 text-indigo-600"> Through App</label>
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-xl shadow-md">Open Store</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- VIEW 2: CATEGORY DASHBOARD -->
+        <div id="categoryView" class="p-5 mt-2 hidden">
+            <!-- 🚚 Logistics Request Banner Button -->
+            <div class="mb-4">
+                <button onclick="openLogisticsModal()" class="w-full bg-blue-600 text-white text-xs font-bold py-3 rounded-xl shadow-sm hover:bg-blue-700 transition flex items-center justify-center">
+                    <i class="fas fa-truck-loading mr-2"></i> Request Logistics & Delivery Support
+                </button>
+            </div>
+
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-gray-900 text-lg">My Inventory</h3>
+                <div class="flex gap-2">
+                    <button onclick="showInbox()" class="text-xs font-bold text-white bg-blue-600 px-3 py-1.5 rounded-full shadow-sm hover:bg-blue-700 transition"><i class="fas fa-inbox mr-1"></i>Inbox</button>
+                    <button onclick="openAddProductModal()" class="text-xs font-bold text-indigo-600 bg-indigo-100 px-3 py-1.5 rounded-full hover:bg-indigo-200 transition"><i class="fas fa-plus mr-1"></i>New Product</button>
+                </div>
+            </div>
+            
+            <div id="categoryGrid" class="grid grid-cols-2 gap-4">
+                <p class="text-xs text-gray-500 italic col-span-2 text-center py-10"><i class="fas fa-spinner fa-spin mr-2"></i> Loading Categories...</p>
+            </div>
+        </div>
+
+        <!-- VIEW 3: PRODUCT LEDGER -->
+        <div id="productView" class="p-5 mt-2 hidden">
+            <div class="flex justify-between items-center mb-4">
+                <button onclick="showCategories()" class="text-xs font-bold text-gray-600 bg-gray-200 px-3 py-1.5 rounded-full hover:bg-gray-300 transition"><i class="fas fa-arrow-left mr-1"></i> Back</button>
+                <h3 id="activeCategoryTitle" class="font-bold text-gray-900 text-lg uppercase">Category</h3>
+                <button onclick="deleteCategory()" class="text-xs font-bold text-red-600 bg-red-100 px-3 py-1.5 rounded-full hover:bg-red-200 transition"><i class="fas fa-trash-alt"></i></button>
+            </div>
+            <div id="productGrid" class="space-y-3"></div>
+        </div>
+
+        <!-- VIEW 4: ORDER INBOX -->
+        <div id="inboxView" class="p-5 mt-2 hidden">
+            <div class="flex items-center mb-4">
+                <button onclick="showCategories()" class="text-xs font-bold text-gray-600 bg-gray-200 px-3 py-1.5 rounded-full hover:bg-gray-300 transition mr-3"><i class="fas fa-arrow-left mr-1"></i> Back</button>
+                <h3 class="font-bold text-gray-900 text-lg"><i class="fas fa-inbox mr-2 text-blue-600"></i>Online Orders</h3>
+            </div>
+            <div id="orderList" class="space-y-4">
+                <p class="text-xs text-gray-500 italic text-center py-10"><i class="fas fa-spinner fa-spin mr-2"></i> Checking for orders...</p>
+            </div>
+        </div>
+
+        <!-- 🚚 LOGISTICS BOOKING MODAL -->
+        <div id="logisticsModal" class="fixed inset-0 bg-black bg-opacity-60 hidden z-50 flex-col justify-end">
+            <div class="bg-white rounded-t-3xl p-6 shadow-2xl transition-all max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-extrabold text-xl text-gray-900">Request Transport & Delivery</h3>
+                    <button onclick="closeLogisticsModal()" class="text-gray-400"><i class="fas fa-times text-xl"></i></button>
+                </div>
+                
+                <form id="logisticsForm" class="space-y-4" onsubmit="submitLogisticsRequest(event)">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">Inputs / Goods Name</label>
+                        <input type="text" id="logItemName" required placeholder="e.g., NPK Fertilizer Sacks" class="w-full border rounded-lg p-2.5 text-sm">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Total Weight (kg)</label>
+                            <input type="number" id="logQty" required placeholder="500" class="w-full border rounded-lg p-2.5 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Vehicle Needed</label>
+                            <select id="logVehicle" class="w-full border rounded-lg p-2.5 text-sm bg-white">
+                                <option value="Small Tempo / Mini Truck">Small Tempo / Mini Truck</option>
+                                <option value="Large Truck (5+ Ton)">Large Truck (5+ Ton)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">Pickup Location</label>
+                        <input type="text" id="logPickup" required placeholder="Supplier Warehouse address" class="w-full border rounded-lg p-2.5 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">Drop-off Destination</label>
+                        <input type="text" id="logDrop" required placeholder="Farmer or Retail center address" class="w-full border rounded-lg p-2.5 text-sm">
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl shadow-md">Dispatch to Drivers</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- 📦 ADD NEW PRODUCT MODAL -->
+        <div id="addProductModal" class="fixed inset-0 bg-black bg-opacity-60 hidden z-50 flex-col justify-end">
+            <div class="bg-white rounded-t-3xl p-6 shadow-2xl transition-all max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-extrabold text-xl text-gray-900">Add Inventory</h3>
+                    <button onclick="closeAddProductModal()" class="text-gray-400 bg-gray-100 rounded-full h-8 w-8 flex justify-center items-center"><i class="fas fa-times"></i></button>
+                </div>
+                <form id="addProductForm" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">Product Name</label>
+                        <input type="text" id="addProdName" required class="w-full border rounded-lg p-2.5 text-sm outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">Category</label>
+                        <select id="addProdCategory" required class="w-full border rounded-lg p-2.5 text-sm bg-white outline-none"></select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Unit Size</label>
+                            <input type="text" id="addProdUnit" list="unitOptions" required placeholder="e.g. 1 kg packet" class="w-full border rounded-lg p-2.5 text-sm outline-none">
+                            <datalist id="unitOptions">
+                                <option value="1 kg packet"></option>
+                                <option value="500 g packet"></option>
+                                <option value="250 ml bottle"></option>
+                                <option value="1 Liter bottle"></option>
+                                <option value="50 kg sack"></option>
+                            </datalist>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Price (₹)</label>
+                            <input type="number" id="addProdPrice" required class="w-full border rounded-lg p-2.5 text-sm outline-none">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">Starting Quantity</label>
+                        <input type="number" id="addProdQty" required value="10" class="w-full border rounded-lg p-2.5 text-sm outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">Product Photo</label>
+                        <input type="file" id="addProdImage" accept="image/*" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-indigo-50 file:text-indigo-600">
+                    </div>
+                    <button type="submit" class="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-xl shadow-md">Publish Product</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- ✏️ EDIT PRODUCT MODAL -->
+        <div id="editProductModal" class="fixed inset-0 bg-black bg-opacity-60 hidden z-50 flex-col justify-end">
+            <div class="bg-white rounded-t-3xl p-6 shadow-2xl transition-all max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-extrabold text-xl text-gray-900">Edit Product</h3>
+                    <button onclick="closeEditProductModal()" class="text-gray-400 bg-gray-100 rounded-full h-8 w-8 flex justify-center items-center"><i class="fas fa-times"></i></button>
+                </div>
+                <form id="editProductForm" class="space-y-4">
+                    <input type="hidden" id="editProdId">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">Product Name</label>
+                        <input type="text" id="editProdName" required class="w-full border rounded-lg p-2.5 text-sm">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Unit Size</label>
+                            <input type="text" id="editProdUnit" required class="w-full border rounded-lg p-2.5 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Price (₹)</label>
+                            <input type="number" id="editProdPrice" required class="w-full border rounded-lg p-2.5 text-sm">
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full bg-gray-900 text-white font-bold py-3.5 rounded-xl shadow-md">Save Changes</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Logic -->
+    <script>
+        let currentSupplier = JSON.parse(localStorage.getItem('frendzy_supplier') || 'null');
+        let tempPhone = ""; 
+        let tempPin = "";
+        let inventory = []; 
+        let globalCategories = []; 
+        let activeCategory = ""; 
+        let uploadedBase64 = "";
+
+        if (!currentSupplier) { 
+            document.getElementById('authView').classList.remove('hidden'); 
+        } else { 
+            activateDashboard(currentSupplier); 
+        }
+
+        function switchAuthTab(tab) {
+            if (tab === 'login') {
+                document.getElementById('tabLogin').className = "flex-1 py-2 text-sm font-bold bg-white text-indigo-700 rounded-lg shadow-sm transition";
+                document.getElementById('tabSetup').className = "flex-1 py-2 text-sm font-bold text-gray-500 rounded-lg transition";
+                document.getElementById('loginForm').classList.replace('hidden', 'block');
+                document.getElementById('otpForm').classList.replace('block', 'hidden');
+            } else {
+                document.getElementById('tabSetup').className = "flex-1 py-2 text-sm font-bold bg-white text-indigo-700 rounded-lg shadow-sm transition";
+                document.getElementById('tabLogin').className = "flex-1 py-2 text-sm font-bold text-gray-500 rounded-lg transition";
+                document.getElementById('otpForm').classList.replace('hidden', 'block');
+                document.getElementById('loginForm').classList.replace('block', 'hidden');
+            }
+        }
+
+        function triggerOTP() { 
+            const p = document.getElementById('setupPhone').value;
+            if(!p) return alert('Enter phone number');
+            tempPhone = p; 
+            document.getElementById('otpStep2').classList.remove('hidden'); 
+            alert('Simulated OTP: 1234');
+        }
+
+        function verifyOTPAndProceed() { 
+            tempPin = document.getElementById('setupPin').value; 
+            if(document.getElementById('setupOtp').value !== '1234') return alert('Invalid OTP');
+            document.getElementById('authView').classList.add('hidden'); 
+            document.getElementById('setupView').classList.remove('hidden'); 
+        }
+        
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const res = await fetch('http://localhost:3000/api/supplier/login', {
+                    method: 'POST', 
+                    headers: {'Content-Type':'application/json'}, 
+                    body: JSON.stringify({ 
+                        phone: document.getElementById('loginPhone').value, 
+                        pin: document.getElementById('loginPin').value 
+                    })
+                });
+                if (res.ok) { 
+                    localStorage.setItem('frendzy_supplier', JSON.stringify(await res.json())); 
+                    window.location.reload(); 
+                } else { 
+                    document.getElementById('loginStatus').classList.remove('hidden'); 
+                }
+            } catch(err) {
+                alert("Server offline or unreachable.");
+            }
+        });
+
+        function detectLocation() {
+            if (!navigator.geolocation) return alert("GPS not supported");
+            navigator.geolocation.getCurrentPosition(async (pos) => {
+                const lat = pos.coords.latitude; 
+                const lng = pos.coords.longitude;
+                document.getElementById('shopLat').value = lat; 
+                document.getElementById('shopLng').value = lng;
+                try {
+                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+                    const data = await res.json();
+                    document.getElementById('shopLocation').value = data.address.city || data.address.town || "Local Area";
+                } catch(e) { 
+                    document.getElementById('shopLocation').value = "GPS Location Pinned"; 
+                }
+            });
+        }
+
+        document.getElementById('onboardForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                shop_name: document.getElementById('shopName').value, 
+                owner_name: document.getElementById('ownerName').value,
+                phone: tempPhone, 
+                pin: tempPin, 
+                address: document.getElementById('shopAddress').value,
+                location: document.getElementById('shopLocation').value,
+                lat: Number(document.getElementById('shopLat').value) || 12.9716,
+                lng: Number(document.getElementById('shopLng').value) || 77.5946,
+                payment_options: Array.from(document.querySelectorAll('.pay-method:checked')).map(cb => cb.value)
+            };
+            const res = await fetch('http://localhost:3000/api/supplier/setup', { 
+                method: 'POST', 
+                headers: {'Content-Type':'application/json'}, 
+                body: JSON.stringify(payload) 
+            });
+            if(res.ok) {
+                localStorage.setItem('frendzy_supplier', JSON.stringify(await res.json())); 
+                window.location.reload();
+            } else {
+                alert("Failed to setup store.");
+            }
+        });
+
+        async function activateDashboard(supplier) {
+            document.getElementById('authView').classList.add('hidden');
+            document.getElementById('setupView').classList.add('hidden');
+            document.getElementById('logoutBtn').classList.remove('hidden');
+            document.getElementById('headerShopName').innerHTML = `<i class="fas fa-store mr-2"></i>${supplier.shop_name}`;
+            document.getElementById('categoryView').classList.remove('hidden');
+            
+            try {
+                const res = await fetch('http://localhost:3000/api/admin/categories?target=SUPPLIER');
+                globalCategories = await res.json();
+            } catch(e) {}
+            fetchInventory();
+        }
+
+        function clearSession() { 
+            localStorage.removeItem('frendzy_supplier'); 
+            window.location.reload(); 
+        }
+
+        function openLogisticsModal() { document.getElementById('logisticsModal').classList.remove('hidden'); document.getElementById('logisticsModal').classList.add('flex'); }
+        function closeLogisticsModal() { document.getElementById('logisticsModal').classList.add('hidden'); document.getElementById('logisticsModal').classList.remove('flex'); }
+
+        async function submitLogisticsRequest(e) {
+            e.preventDefault();
+            const payload = {
+                item_name: document.getElementById('logItemName').value,
+                quantity_kg: Number(document.getElementById('logQty').value),
+                pickup_location: document.getElementById('logPickup').value,
+                drop_location: document.getElementById('logDrop').value,
+                requester_phone: currentSupplier.phone,
+                requester_role: 'SUPPLIER',
+                vehicle_required: document.getElementById('logVehicle').value
+            };
+            try {
+                const res = await fetch('http://localhost:3000/api/logistics/request', {
+                    method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload)
+                });
+                if(res.ok) { alert("🚚 Transport request broadcasted to drivers!"); closeLogisticsModal(); document.getElementById('logisticsForm').reset(); }
+                else { alert("❌ Failed to request logistics."); }
+            } catch(err) { alert("❌ Server connection error."); }
+        }
+
+        async function fetchInventory() {
+            const res = await fetch(`http://localhost:3000/api/supplier/inventory/${currentSupplier.phone}`);
+            inventory = await res.json();
+            renderCategories();
+        }
+
+        function renderCategories() {
+            const grid = document.getElementById('categoryGrid');
+            const activeCats = [...new Set(inventory.map(i => i.category))];
+            if (activeCats.length === 0) {
+                grid.innerHTML = `<div class="col-span-2 bg-indigo-50 p-6 rounded-2xl text-center"><p class="text-sm font-bold text-indigo-800">Your store is empty!</p></div>`;
+                return;
+            }
+            grid.innerHTML = '';
+            activeCats.forEach(cat => {
+                const count = inventory.filter(i => i.category === cat).length;
+                const style = globalCategories.find(c => c.name === cat) || { icon: 'fa-box', color: 'text-indigo-600', bg: 'bg-indigo-50' };
+                grid.innerHTML += `
+                    <div onclick="openCategory('${cat}')" class="bg-white p-5 rounded-2xl shadow-sm border cursor-pointer flex flex-col items-center justify-center">
+                        <div class="h-12 w-12 ${style.bg} ${style.color} rounded-full flex items-center justify-center mb-2"><i class="fas ${style.icon} text-xl"></i></div>
+                        <h3 class="font-bold text-gray-800">${cat}</h3>
+                        <p class="text-[10px] text-gray-400 mt-1">${count} Items</p>
+                    </div>`;
+            });
+        }
+
+        function showCategories() { 
+            document.getElementById('inboxView').classList.add('hidden');
+            document.getElementById('productView').classList.add('hidden');
+            document.getElementById('categoryView').classList.remove('hidden'); 
+            fetchInventory(); 
+        }
+
+        function openCategory(cat) { 
+            activeCategory = cat; 
+            document.getElementById('categoryView').classList.add('hidden'); 
+            document.getElementById('productView').classList.remove('hidden'); 
+            document.getElementById('activeCategoryTitle').innerText = cat; 
+            renderProducts(cat); 
+        }
+
+        function renderProducts(cat) {
+            const grid = document.getElementById('productGrid'); 
+            grid.innerHTML = '';
+            inventory.filter(i => i.category === cat).forEach(item => {
+                grid.innerHTML += `
+                    <div class="bg-white p-3 rounded-xl shadow-sm border flex items-center">
+                        <img src="${item.image_url}" class="h-16 w-16 object-cover rounded-lg mr-3 bg-gray-200">
+                        <div class="flex-1">
+                            <h4 class="font-bold text-gray-900 text-sm">${item.product_name}</h4>
+                            <p class="text-xs font-extrabold text-indigo-600">₹${item.price} <span class="text-[9px] text-gray-400">/ ${item.unit_size}</span></p>
+                            <div class="flex items-center mt-2 bg-gray-50 inline-flex rounded-lg border p-1">
+                                <button onclick="updateStock('${item._id}', ${item.quantity - 1})" class="h-6 w-6 text-gray-500"><i class="fas fa-minus text-xs"></i></button>
+                                <span class="text-xs font-bold w-8 text-center">${item.quantity}</span>
+                                <button onclick="updateStock('${item._id}', ${item.quantity + 1})" class="h-6 w-6 text-gray-500"><i class="fas fa-plus text-xs"></i></button>
+                            </div>
+                        </div>
+                        <div class="flex flex-col space-y-2">
+                            <button onclick="openEditProductModal('${item._id}')" class="bg-blue-50 text-blue-600 text-[10px] font-bold px-3 py-1.5 rounded-lg">Edit</button>
+                            <button onclick="deleteProduct('${item._id}')" class="bg-red-50 text-red-600 text-[10px] font-bold px-3 py-1.5 rounded-lg">Delete</button>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        async function updateStock(id, newQty) { 
+            if(newQty < 0) return; 
+            const res = await fetch(`http://localhost:3000/api/inputs/${id}/stock`, { 
+                method:'PATCH', 
+                headers:{'Content-Type':'application/json'}, 
+                body:JSON.stringify({quantity:newQty})
+            }); 
+            const updated = await res.json();
+            inventory = inventory.map(i => i._id === id ? updated : i); 
+            renderProducts(activeCategory); 
+        }
+
+        async function deleteProduct(id) {
+            if(!confirm("Delete product?")) return;
+            await fetch(`http://localhost:3000/api/crops/${id}`, { method: 'DELETE' }); 
+            inventory = inventory.filter(i => i._id !== id); 
+            renderProducts(activeCategory);
+        }
+
+        document.getElementById('addProdImage').addEventListener('change', e => { 
+            const reader = new FileReader(); 
+            reader.onload = ev => uploadedBase64 = ev.target.result; 
+            reader.readAsDataURL(e.target.files[0]); 
+        });
+
+        function openAddProductModal() {
+            const select = document.getElementById('addProdCategory');
+            select.innerHTML = globalCategories.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+            document.getElementById('addProductModal').classList.remove('hidden'); 
+            document.getElementById('addProductModal').classList.add('flex');
+        }
+
+        function closeAddProductModal() { 
+            document.getElementById('addProductModal').classList.add('hidden'); 
+            document.getElementById('addProductModal').classList.remove('flex'); 
+        }
+
+        document.getElementById('addProductForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                product_name: document.getElementById('addProdName').value, 
+                category: document.getElementById('addProdCategory').value,
+                unit_size: document.getElementById('addProdUnit').value, 
+                price: Number(document.getElementById('addProdPrice').value), 
+                quantity: Number(document.getElementById('addProdQty').value), 
+                supplier_name: currentSupplier.shop_name, 
+                supplier_phone: currentSupplier.phone, 
+                image_url: uploadedBase64 || "https://images.unsplash.com/photo-1592982537447-6f23f5b7ea57?w=600&q=80"
+            };
+            await fetch('http://localhost:3000/api/inputs', { 
+                method: 'POST', 
+                headers: {'Content-Type':'application/json'}, 
+                body: JSON.stringify(payload) 
+            });
+            closeAddProductModal(); 
+            fetchInventory();
+        });
+
+        function openEditProductModal(id) {
+            const item = inventory.find(i => i._id === id);
+            document.getElementById('editProdId').value = item._id;
+            document.getElementById('editProdName').value = item.product_name;
+            document.getElementById('editProdUnit').value = item.unit_size;
+            document.getElementById('editProdPrice').value = item.price;
+            document.getElementById('editProductModal').classList.remove('hidden'); 
+            document.getElementById('editProductModal').classList.add('flex');
+        }
+
+        function closeEditProductModal() { 
+            document.getElementById('editProductModal').classList.add('hidden'); 
+            document.getElementById('editProductModal').classList.remove('flex'); 
+        }
+
+        document.getElementById('editProductForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('editProdId').value;
+            const payload = { 
+                product_name: document.getElementById('editProdName').value, 
+                unit_size: document.getElementById('editProdUnit').value, 
+                price: Number(document.getElementById('editProdPrice').value) 
+            };
+            const res = await fetch(`http://localhost:3000/api/inputs/${id}`, { 
+                method: 'PATCH', 
+                headers: {'Content-Type':'application/json'}, 
+                body: JSON.stringify(payload) 
+            });
+            const updated = await res.json();
+            inventory = inventory.map(i => i._id === id ? updated : i);
+            closeEditProductModal(); 
+            renderProducts(activeCategory);
+        });
+
+        function showInbox() {
+            document.getElementById('categoryView').classList.add('hidden');
+            document.getElementById('inboxView').classList.remove('hidden');
+            fetchOrders();
+        }
+
+        async function fetchOrders() {
+            const res = await fetch(`http://localhost:3000/api/supplier/orders/${currentSupplier.phone}`);
+            const orders = await res.json();
+            const list = document.getElementById('orderList');
+            if(orders.length === 0) { 
+                list.innerHTML = `<p class="text-xs text-gray-500 text-center py-6">No online orders right now.</p>`; 
+                return; 
+            }
+            list.innerHTML = orders.map(o => `
+                <div class="bg-white border p-4 rounded-xl shadow-sm">
+                    <h4 class="font-bold text-gray-900">${o.item_name} (Qty: ${o.quantity})</h4>
+                    <p class="text-xs text-gray-500 my-1">Total: ₹${o.total_price} | Buyer: ${o.buyer_phone}</p>
+                    <button onclick="acceptOrder('${o._id}')" class="w-full bg-green-600 text-white font-bold py-2 rounded-lg text-xs mt-2">Accept Order & Pack</button>
+                </div>`).join('');
+        }
+
+        async function acceptOrder(id) {
+            await fetch(`http://localhost:3000/api/orders/${id}/status`, { 
+                method: 'PATCH', 
+                headers: {'Content-Type':'application/json'}, 
+                body: JSON.stringify({status: 'Accepted'}) 
+            });
+            alert("Order accepted!"); 
+            fetchOrders();
+        }
+    </script>
+</body>
+</html>

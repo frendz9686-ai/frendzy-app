@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frendzy - Machinery Rental Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = { theme: { extend: { colors: { machblue: '#0284c7', machdark: '#0369a1', farmgreen: '#16a34a' } } } }
+    </script>
+</head>
+<body class="bg-gray-100 font-sans text-gray-800">
+
+    <!-- Removed bottom padding since bottom bar is deleted -->
+    <div class="max-w-md mx-auto bg-gray-50 min-h-screen shadow-2xl relative pb-6 overflow-hidden">
+        
+        <!-- Header -->
+        <header class="bg-machblue text-white p-4 rounded-b-3xl shadow-md flex justify-between items-center sticky top-0 z-40">
+            <div class="flex items-center gap-2">
+                <a href="farmer-dashboard.html" class="bg-sky-900 text-white h-8 w-8 rounded-full flex items-center justify-center hover:bg-sky-800 transition"><i class="fas fa-arrow-left text-xs"></i></a>
+                <div>
+                    <h2 class="font-bold text-base">Machinery Rental Portal</h2>
+                    <p class="text-sky-100 text-[10px]" id="locationText"><i class="fas fa-map-marker-alt mr-1"></i>Detecting GPS Location...</p>
+                </div>
+            </div>
+            <!-- 🌐 Language Switcher -->
+            <select id="langSwitcher" onchange="changeLanguage(this.value)" class="bg-white/20 text-white border border-white/30 rounded-lg px-2 py-1 text-xs font-bold outline-none cursor-pointer">
+                <option value="en" class="text-gray-900">EN</option>
+                <option value="hi" class="text-gray-900">HI</option>
+                <option value="kn" class="text-gray-900">KN</option>
+            </select>
+        </header>
+
+        <!-- Rental Feed (Nearby Available Equipment) -->
+        <div class="p-4 space-y-3">
+            <h3 class="font-bold text-gray-900 text-base"><i class="fas fa-tractor text-machblue mr-2"></i>Available Machinery For Your Farm</h3>
+            <p class="text-xs text-gray-500">Hire tractors, JCBs, tippers, and harvesters on demand.</p>
+            
+            <div id="machineryFeed" class="space-y-3 mt-3">
+                <p class="text-xs text-gray-400 italic text-center py-6">Scanning nearby machinery feeds...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Script -->
+    <script>
+        function changeLanguage(langCode) {
+            localStorage.setItem('frendzy_lang', langCode);
+            if(document.getElementById('langSwitcher')) document.getElementById('langSwitcher').value = langCode;
+        }
+        document.addEventListener("DOMContentLoaded", () => { 
+            changeLanguage(localStorage.getItem('frendzy_lang') || 'en');
+            detectLocation();
+            fetchMachineryFeed();
+        });
+
+        function detectLocation() {
+            if (!navigator.geolocation) return;
+            navigator.geolocation.getCurrentPosition(async (pos) => {
+                const lat = pos.coords.latitude; const lng = pos.coords.longitude;
+                try {
+                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+                    const data = await res.json();
+                    document.getElementById('locationText').innerHTML = `<i class="fas fa-map-marker-alt mr-1"></i>${data.address.city || data.address.town || 'Local Hub'}, GPS Active`;
+                } catch(e) {
+                    document.getElementById('locationText').innerHTML = `<i class="fas fa-map-marker-alt mr-1"></i>GPS Pinned`;
+                }
+            });
+        }
+
+        async function fetchMachineryFeed() {
+            const feed = document.getElementById('machineryFeed');
+            try {
+                const res = await fetch('http://localhost:3000/api/machinery');
+                const list = await res.json();
+                if(list.length === 0) {
+                    feed.innerHTML = `<p class="text-xs text-gray-500 text-center py-8 bg-white rounded-xl border">No machinery listed for hire yet.</p>`;
+                    return;
+                }
+                feed.innerHTML = list.map(m => `
+                    <div class="bg-white rounded-2xl shadow-sm border overflow-hidden flex items-center p-3">
+                        <img src="${m.image_url}" class="h-20 w-20 object-cover rounded-xl mr-3 bg-gray-200">
+                        <div class="flex-1">
+                            <span class="text-[9px] bg-sky-100 text-sky-800 font-bold px-2 py-0.5 rounded">${m.category}</span>
+                            <h4 class="font-bold text-gray-900 text-sm mt-1">${m.name}</h4>
+                            <p class="text-xs font-extrabold text-machblue mt-0.5">₹${m.rate} <span class="text-[10px] text-gray-400 font-normal">/ ${m.unit}</span></p>
+                        </div>
+                        <button onclick="bookMachinery('${m._id}', '${m.name}', '${m.provider_phone}', ${m.rate}, '${m.unit}')" class="bg-machblue text-white text-xs font-bold px-3 py-2 rounded-xl shadow-sm hover:bg-sky-700">Book Now</button>
+                    </div>`).join('');
+            } catch(e) {
+                feed.innerHTML = `<p class="text-xs text-red-500 text-center py-4">Failed to load equipment feed.</p>`;
+            }
+        }
+
+        async function bookMachinery(id, name, providerPhone, rate, unit) {
+            let farmerPhone = "";
+            const currentUser = JSON.parse(localStorage.getItem('frendzy_user') || 'null');
+            if (currentUser && currentUser.phone) {
+                farmerPhone = currentUser.phone;
+            } else {
+                farmerPhone = prompt("Enter your 10-digit phone number to complete the booking request:");
+                if (!farmerPhone) return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:3000/api/machinery/book', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        machinery_id: id,
+                        machinery_name: name,
+                        provider_phone: providerPhone,
+                        farmer_phone: farmerPhone,
+                        rate: rate,
+                        unit: unit
+                    })
+                });
+
+                if (response.ok) {
+                    alert("✅ Booking request sent successfully to the equipment provider!");
+                } else {
+                    alert("❌ Failed to submit booking request.");
+                }
+            } catch (err) {
+                alert("❌ Server error while sending booking request.");
+            }
+        }
+    </script>
+</body>
+</html>

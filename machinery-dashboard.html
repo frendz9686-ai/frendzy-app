@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frendzy - Agri-Machinery Provider & Rental Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = { theme: { extend: { colors: { machblue: '#0284c7', machdark: '#0369a1', farmgreen: '#16a34a' } } } }
+    </script>
+</head>
+<body class="bg-gray-100 font-sans text-gray-800">
+
+    <div class="max-w-md mx-auto bg-gray-50 min-h-screen shadow-2xl relative pb-24 overflow-hidden">
+        
+        <!-- Header -->
+        <header class="bg-machblue text-white p-4 rounded-b-3xl shadow-md flex justify-between items-center sticky top-0 z-40">
+            <div>
+                <h2 class="font-bold text-lg"><i class="fas fa-tractor mr-2"></i>Machinery Provider Portal</h2>
+                <p class="text-sky-100 text-[10px]" id="locationText"><i class="fas fa-map-marker-alt mr-1"></i>Detecting GPS Location...</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <!-- 🌐 Language Switcher -->
+                <select id="langSwitcher" onchange="changeLanguage(this.value)" class="bg-white/20 text-white border border-white/30 rounded-lg px-2 py-1 text-xs font-bold outline-none cursor-pointer">
+                    <option value="en" class="text-gray-900">EN</option>
+                    <option value="hi" class="text-gray-900">HI</option>
+                    <option value="kn" class="text-gray-900">KN</option>
+                </select>
+                <button onclick="clearSession()" id="logoutBtn" class="hidden text-xs bg-sky-900 px-3 py-1.5 rounded-full hover:bg-sky-800 transition shadow">Logout</button>
+            </div>
+        </header>
+
+        <!-- AUTH GATEWAY (LOGIN & REGISTER FOR MACHINERY PROVIDERS) -->
+        <div id="authView" class="p-5 mt-4 block">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <div class="flex bg-gray-100 rounded-xl p-1 mb-6">
+                    <button onclick="switchAuthTab('login')" id="tabLogin" class="flex-1 py-2 text-sm font-bold bg-white text-machblue rounded-lg shadow-sm transition">Login</button>
+                    <button onclick="switchAuthTab('register')" id="tabRegister" class="flex-1 py-2 text-sm font-bold text-gray-500 rounded-lg transition">Register Provider</button>
+                </div>
+
+                <!-- Login Form -->
+                <form id="loginForm" class="space-y-4 block">
+                    <input type="tel" id="loginPhone" required placeholder="Phone Number" class="w-full border rounded-lg p-2.5 text-sm outline-none">
+                    <input type="password" id="loginPin" required maxlength="4" placeholder="4-Digit PIN" class="w-full border rounded-lg p-2.5 text-sm tracking-widest text-center outline-none">
+                    <button type="submit" class="w-full bg-machblue text-white font-bold py-3.5 rounded-xl shadow-md">Login to Provider Hub</button>
+                    <p id="loginStatus" class="text-xs text-red-500 font-bold text-center mt-2 hidden">Invalid credentials</p>
+                </form>
+
+                <!-- Registration Form -->
+                <form id="registerForm" class="space-y-3 hidden">
+                    <input type="text" id="regName" required placeholder="Provider Name / Agency" class="w-full border rounded-lg p-2.5 text-sm outline-none">
+                    <input type="tel" id="regPhone" required placeholder="Phone Number" class="w-full border rounded-lg p-2.5 text-sm outline-none">
+                    <input type="password" id="regPin" required maxlength="4" placeholder="Create 4-Digit PIN" class="w-full border rounded-lg p-2.5 text-sm tracking-widest text-center outline-none">
+                    <button type="submit" class="w-full bg-machblue text-white font-bold py-3.5 rounded-xl shadow-md">Register Agency</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- MAIN DASHBOARD VIEWS -->
+        <div id="dashboardView" class="hidden">
+            
+            <!-- VIEW 1: INVENTORY (EQUIPMENT FLEET & CATEGORIES) -->
+            <div id="providerInventoryView" class="block space-y-4">
+                <!-- Category Grid (Admin Controlled via target=MACHINERY) -->
+                <div class="p-4 pb-0 pt-3">
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="font-bold text-gray-900 text-base"><i class="fas fa-cogs text-machblue mr-2"></i>Machinery Categories</h3>
+                        <button onclick="openAddMachineModal()" class="bg-machblue text-white text-xs font-bold px-3 py-2 rounded-full shadow-sm hover:bg-sky-700 transition">
+                            <i class="fas fa-plus mr-1"></i> List Equipment
+                        </button>
+                    </div>
+                    <div id="categoryGrid" class="grid grid-cols-2 gap-3">
+                        <p class="text-xs text-gray-500 italic col-span-2 text-center py-4">Loading admin categories...</p>
+                    </div>
+                </div>
+
+                <!-- Rental Fleet Feed -->
+                <div class="p-4 pt-0">
+                    <h3 class="font-bold text-gray-900 text-base mb-3"><i class="fas fa-truck-monster text-machblue mr-2"></i>Your Listed Equipment Fleet</h3>
+                    <div id="machineryFeed" class="space-y-3">
+                        <p class="text-xs text-gray-400 italic text-center py-4">Scanning machinery fleet...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW 2: RENTAL BOOKINGS INBOX -->
+            <div id="providerBookingsView" class="p-4 hidden space-y-3">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="font-bold text-gray-900 text-base"><i class="fas fa-inbox text-machblue mr-2"></i>Rental Bookings</h3>
+                    <button onclick="fetchBookings()" class="text-xs text-machblue font-bold hover:underline"><i class="fas fa-sync-alt mr-1"></i> Refresh</button>
+                </div>
+                <div id="bookingInbox" class="space-y-2">
+                    <p class="text-xs text-gray-500 text-center italic py-6 bg-white rounded-xl border">No incoming booking requests.</p>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- 🚜 LIST EQUIPMENT MODAL -->
+        <div id="addMachineModal" class="fixed inset-0 bg-black bg-opacity-60 hidden z-50 flex-col justify-end">
+            <div class="bg-white rounded-t-3xl p-6 shadow-2xl transition-all max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-extrabold text-xl text-gray-900">List Heavy Equipment</h3>
+                    <button onclick="closeAddMachineModal()" class="text-gray-400"><i class="fas fa-times text-xl"></i></button>
+                </div>
+                
+                <form id="machineForm" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">Equipment / Model Name</label>
+                        <input type="text" id="machineName" required placeholder="e.g., John Deere 5050D Tractor" class="w-full border rounded-lg p-2.5 text-sm">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">Category (Admin Controlled)</label>
+                        <select id="machineCategory" required class="w-full border rounded-lg p-2.5 text-sm bg-white"></select>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Rate (₹)</label>
+                            <input type="number" id="machineRate" required placeholder="1200" class="w-full border rounded-lg p-2.5 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Per Unit</label>
+                            <select id="machineUnit" class="w-full border rounded-lg p-2.5 text-sm bg-white">
+                                <option value="Per Hour">Per Hour</option>
+                                <option value="Per Acre">Per Acre</option>
+                                <option value="Per Day">Per Day</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">Equipment Photo</label>
+                        <input type="file" id="machinePhoto" accept="image/*" class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-sky-50 file:text-machblue cursor-pointer">
+                    </div>
+
+                    <button type="submit" class="w-full bg-machblue text-white font-bold py-3.5 rounded-xl shadow-md">Publish for Hire</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Bottom Navigation Bar -->
+        <nav id="bottomNav" class="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-2.5 flex justify-around items-center z-50 shadow-lg hidden">
+            <button onclick="switchProviderTab('inventory')" id="navInventory" class="flex flex-col items-center text-machblue transition">
+                <i class="fas fa-boxes text-base mb-0.5"></i>
+                <span class="text-[10px] font-bold">Inventory</span>
+            </button>
+            <button onclick="switchProviderTab('bookings')" id="navBookings" class="flex flex-col items-center text-gray-400 hover:text-gray-600 transition">
+                <i class="fas fa-clipboard-list text-base mb-0.5"></i>
+                <span class="text-[10px] font-bold">Rental Bookings</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- Application Script -->
+    <script>
+        const translations = {
+            en: { hub_title: "Machinery Portal" },
+            hi: { hub_title: "मशीनरी पोर्टल" },
+            kn: { hub_title: "ಯಂತ್ರೋಪಕರಣಗಳ ಪೋರ್ಟಲ್" }
+        };
+
+        function changeLanguage(langCode) {
+            localStorage.setItem('frendzy_lang', langCode);
+            if(document.getElementById('langSwitcher')) document.getElementById('langSwitcher').value = langCode;
+        }
+        document.addEventListener("DOMContentLoaded", () => { 
+            changeLanguage(localStorage.getItem('frendzy_lang') || 'en');
+            detectLocation();
+        });
+
+        let currentProvider = JSON.parse(localStorage.getItem('frendzy_machinery_user') || 'null');
+        let globalCategories = [];
+        let uploadedBase64 = "";
+
+        if (currentProvider) activateDashboard();
+
+        function switchAuthTab(tab) {
+            if (tab === 'login') {
+                document.getElementById('tabLogin').className = "flex-1 py-2 text-sm font-bold bg-white text-machblue rounded-lg shadow-sm transition";
+                document.getElementById('tabRegister').className = "flex-1 py-2 text-sm font-bold text-gray-500 rounded-lg transition";
+                document.getElementById('loginForm').classList.replace('hidden', 'block');
+                document.getElementById('registerForm').classList.replace('block', 'hidden');
+            } else {
+                document.getElementById('tabRegister').className = "flex-1 py-2 text-sm font-bold bg-white text-machblue rounded-lg shadow-sm transition";
+                document.getElementById('tabLogin').className = "flex-1 py-2 text-sm font-bold text-gray-500 rounded-lg transition";
+                document.getElementById('registerForm').classList.replace('hidden', 'block');
+                document.getElementById('loginForm').classList.replace('block', 'hidden');
+            }
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const phone = document.getElementById('loginPhone').value;
+            const user = { phone, name: "Equipment Provider" };
+            localStorage.setItem('frendzy_machinery_user', JSON.stringify(user));
+            currentProvider = user;
+            window.location.reload();
+        });
+
+        document.getElementById('registerForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const phone = document.getElementById('regPhone').value;
+            const user = { phone, name: document.getElementById('regName').value };
+            localStorage.setItem('frendzy_machinery_user', JSON.stringify(user));
+            currentProvider = user;
+            window.location.reload();
+        });
+
+        function clearSession() {
+            localStorage.removeItem('frendzy_machinery_user');
+            window.location.reload();
+        }
+
+        function activateDashboard() {
+            document.getElementById('authView').classList.add('hidden');
+            document.getElementById('dashboardView').classList.remove('hidden');
+            document.getElementById('bottomNav').classList.remove('hidden');
+            document.getElementById('logoutBtn').classList.remove('hidden');
+            fetchAdminCategories();
+            fetchMachineryFeed();
+            fetchBookings();
+        }
+
+        function switchProviderTab(tabName) {
+            const tabs = ['inventory', 'bookings'];
+            tabs.forEach(t => {
+                const view = document.getElementById(`provider${t.charAt(0).toUpperCase() + t.slice(1)}View`);
+                const nav = document.getElementById(`nav${t.charAt(0).toUpperCase() + t.slice(1)}`);
+                if(t === tabName) {
+                    view.classList.remove('hidden');
+                    nav.className = "flex flex-col items-center text-machblue transition";
+                    if(t === 'bookings') fetchBookings();
+                } else {
+                    view.classList.add('hidden');
+                    nav.className = "flex flex-col items-center text-gray-400 hover:text-gray-600 transition";
+                }
+            });
+        }
+
+        async function fetchAdminCategories() {
+            try {
+                const res = await fetch('http://localhost:3000/api/admin/categories?target=MACHINERY');
+                globalCategories = await res.json();
+                renderCategories();
+            } catch(e) {
+                globalCategories = [
+                    { name: 'Tractors', icon: 'fa-tractor', color: 'text-sky-600', bg: 'bg-sky-50' },
+                    { name: 'Harvesters', icon: 'fa-wheat-awn', color: 'text-amber-600', bg: 'bg-amber-50' },
+                    { name: 'JCB & Backhoe', icon: 'fa-truck-monster', color: 'text-yellow-600', bg: 'bg-yellow-50' },
+                    { name: 'Tipper & Trucks', icon: 'fa-truck', color: 'text-blue-600', bg: 'bg-blue-50' }
+                ];
+                renderCategories();
+            }
+        }
+
+        function renderCategories() {
+            const grid = document.getElementById('categoryGrid');
+            grid.innerHTML = '';
+            globalCategories.forEach(cat => {
+                grid.innerHTML += `
+                    <div class="bg-white p-3 rounded-2xl shadow-sm border cursor-pointer flex flex-col items-center justify-center hover:shadow-md transition">
+                        <div class="h-9 w-9 ${cat.bg || 'bg-sky-50'} ${cat.color || 'text-machblue'} rounded-full flex items-center justify-center mb-1">
+                            <i class="fas ${cat.icon || 'fa-tractor'} text-xs"></i>
+                        </div>
+                        <h3 class="font-bold text-gray-800 text-xs text-center">${cat.name}</h3>
+                    </div>`;
+            });
+        }
+
+        function detectLocation() {
+            if (!navigator.geolocation) return;
+            navigator.geolocation.getCurrentPosition(async (pos) => {
+                const lat = pos.coords.latitude; const lng = pos.coords.longitude;
+                try {
+                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+                    const data = await res.json();
+                    document.getElementById('locationText').innerHTML = `<i class="fas fa-map-marker-alt mr-1"></i>${data.address.city || data.address.town || 'Local Hub'}, GPS Active`;
+                } catch(e) {
+                    document.getElementById('locationText').innerHTML = `<i class="fas fa-map-marker-alt mr-1"></i>GPS Pinned`;
+                }
+            });
+        }
+
+        document.getElementById('machinePhoto').addEventListener('change', (e) => {
+            const reader = new FileReader();
+            reader.onload = ev => uploadedBase64 = ev.target.result;
+            reader.readAsDataURL(e.target.files[0]);
+        });
+
+        function openAddMachineModal() {
+            const select = document.getElementById('machineCategory');
+            select.innerHTML = '<option value="" disabled selected>Select Admin Category...</option>' + globalCategories.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+            document.getElementById('addMachineModal').classList.remove('hidden');
+            document.getElementById('addMachineModal').classList.add('flex');
+        }
+
+        function closeAddMachineModal() {
+            document.getElementById('addMachineModal').classList.add('hidden');
+            document.getElementById('addMachineModal').classList.remove('flex');
+        }
+
+        document.getElementById('machineForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                name: document.getElementById('machineName').value,
+                category: document.getElementById('machineCategory').value,
+                rate: Number(document.getElementById('machineRate').value),
+                unit: document.getElementById('machineUnit').value,
+                provider_phone: currentProvider.phone,
+                image_url: uploadedBase64 || "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=600&q=80"
+            };
+            
+            try {
+                await fetch('http://localhost:3000/api/machinery', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+                closeAddMachineModal();
+                uploadedBase64 = "";
+                fetchMachineryFeed();
+            } catch(err) {
+                alert("Failed to publish equipment.");
+            }
+        });
+
+        async function fetchMachineryFeed() {
+            const feed = document.getElementById('machineryFeed');
+            try {
+                const res = await fetch('http://localhost:3000/api/machinery');
+                const list = (await res.json()).filter(m => m.provider_phone === currentProvider.phone);
+                if(list.length === 0) {
+                    feed.innerHTML = `<p class="text-xs text-gray-500 text-center py-4 bg-white rounded-xl border">No equipment listed by you yet.</p>`;
+                    return;
+                }
+                feed.innerHTML = list.map(m => `
+                    <div class="bg-white rounded-2xl shadow-sm border overflow-hidden flex items-center p-3">
+                        <img src="${m.image_url}" class="h-16 w-16 object-cover rounded-xl mr-3 bg-gray-200">
+                        <div class="flex-1">
+                            <span class="text-[9px] bg-sky-100 text-sky-800 font-bold px-2 py-0.5 rounded">${m.category}</span>
+                            <h4 class="font-bold text-gray-900 text-xs mt-1">${m.name}</h4>
+                            <p class="text-xs font-extrabold text-machblue mt-0.5">₹${m.rate} <span class="text-[10px] text-gray-400 font-normal">/ ${m.unit}</span></p>
+                        </div>
+                    </div>`).join('');
+            } catch(e) {
+                feed.innerHTML = `<p class="text-xs text-red-500 text-center">Failed to load equipment fleet.</p>`;
+            }
+        }
+
+        async function fetchBookings() {
+            const inbox = document.getElementById('bookingInbox');
+            try {
+                const res = await fetch(`http://localhost:3000/api/machinery/bookings/${currentProvider.phone}`);
+                const bookings = await res.json();
+                if(bookings.length === 0) {
+                    inbox.innerHTML = `<p class="text-xs text-gray-500 text-center py-6 bg-white rounded-xl border">No incoming booking requests.</p>`;
+                    return;
+                }
+                inbox.innerHTML = bookings.map(b => `
+                    <div class="bg-white p-3 rounded-xl border shadow-sm flex justify-between items-center text-xs">
+                        <div>
+                            <strong>${b.machinery_name}</strong>
+                            <p class="text-[10px] text-gray-500 mt-0.5">Farmer: ${b.farmer_phone} | ₹${b.rate} / ${b.unit}</p>
+                            <span class="text-[9px] font-bold px-1.5 py-0.5 rounded uppercase ${b.status === 'ACCEPTED' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}">${b.status}</span>
+                        </div>
+                        ${b.status === 'PENDING' ? `<button onclick="acceptBooking('${b._id}')" class="bg-machblue text-white font-bold px-3 py-1.5 rounded-lg">Accept</button>` : ''}
+                    </div>`).join('');
+            } catch(e) {
+                inbox.innerHTML = `<p class="text-xs text-red-500 text-center">Failed to load bookings.</p>`;
+            }
+        }
+
+        async function acceptBooking(id) {
+            try {
+                await fetch(`http://localhost:3000/api/machinery/bookings/${id}/accept`, { method: 'PATCH' });
+                alert("Booking accepted successfully!");
+                fetchBookings();
+            } catch(e) {
+                alert("Failed to accept booking.");
+            }
+        }
+    </script>
+</body>
+</html>

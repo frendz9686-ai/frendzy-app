@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frendzy - Farmer Knowledge & Community Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = { theme: { extend: { colors: { farmgreen: '#16a34a', farmyellow: '#f59e0b' } } } }
+    </script>
+</head>
+<body class="bg-gray-100 font-sans text-gray-800">
+
+    <div class="max-w-md mx-auto bg-gray-50 min-h-screen shadow-2xl relative pb-28 overflow-hidden">
+        
+        <!-- Header -->
+        <header class="bg-farmgreen text-white p-4 rounded-b-3xl shadow-md flex justify-between items-center sticky top-0 z-40">
+            <div class="flex items-center gap-2">
+                <a href="farmer-dashboard.html" class="bg-green-800 text-white h-8 w-8 rounded-full flex items-center justify-center hover:bg-green-900 transition"><i class="fas fa-arrow-left text-xs"></i></a>
+                <div>
+                    <h2 class="font-bold text-base" data-i18n="hub_title">Knowledge & Community Hub</h2>
+                    <p class="text-green-100 text-[10px]" id="districtSubtitle"><i class="fas fa-map-marker-alt mr-1"></i>Detecting Live GPS Location...</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <!-- 🌐 Language Switcher -->
+                <select id="langSwitcher" onchange="changeLanguage(this.value)" class="bg-white/20 text-white border border-white/30 rounded-lg px-2 py-1 text-xs font-bold outline-none cursor-pointer">
+                    <option value="en" class="text-gray-900">EN</option>
+                    <option value="hi" class="text-gray-900">HI</option>
+                    <option value="kn" class="text-gray-900">KN</option>
+                </select>
+            </div>
+        </header>
+
+        <!-- TABS NAVIGATION -->
+        <div class="p-4 pb-0">
+            <div class="flex bg-white rounded-xl p-1 shadow-sm border border-gray-200">
+                <button onclick="switchTab('weather')" id="tabWeather" class="flex-1 py-2 text-xs font-bold bg-farmgreen text-white rounded-lg shadow-sm transition">Weather</button>
+                <button onclick="switchTab('mandi')" id="tabMandi" class="flex-1 py-2 text-xs font-bold text-gray-600 rounded-lg transition">Mandi & MSP</button>
+                <button onclick="switchTab('ai')" id="tabAi" class="flex-1 py-2 text-xs font-bold text-gray-600 rounded-lg transition">AI Clinic</button>
+                <button onclick="switchTab('advisory')" id="tabAdvisory" class="flex-1 py-2 text-xs font-bold text-gray-600 rounded-lg transition">AI Advisor</button>
+                <button onclick="switchTab('schemes')" id="tabSchemes" class="flex-1 py-2 text-xs font-bold text-gray-600 rounded-lg transition">Schemes</button>
+            </div>
+        </div>
+
+        <!-- TAB 1: WEATHER APP WIDGET -->
+        <div id="contentWeather" class="p-4 space-y-4 block">
+            <div class="bg-gradient-to-br from-blue-500 to-indigo-600 text-white p-5 rounded-2xl shadow-md relative overflow-hidden">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p id="weatherLocation" class="text-xs font-semibold text-blue-100 uppercase tracking-wider">Locating District...</p>
+                        <h2 class="text-4xl font-extrabold mt-1">28°C</h2>
+                        <p class="text-xs text-blue-100 mt-1">Partly Cloudy & Humid</p>
+                    </div>
+                    <i class="fas fa-cloud-sun text-5xl text-blue-200/80"></i>
+                </div>
+                <div class="grid grid-cols-3 gap-2 mt-5 pt-4 border-t border-blue-400/30 text-center text-xs">
+                    <div><span class="block text-[10px] text-blue-200">Humidity</span><strong>68%</strong></div>
+                    <div><span class="block text-[10px] text-blue-200">Wind</span><strong>12 km/h</strong></div>
+                    <div><span class="block text-[10px] text-blue-200">Rain Risk</span><strong>Low (15%)</strong></div>
+                </div>
+            </div>
+
+            <div class="bg-amber-50 border border-amber-200 p-3.5 rounded-xl flex items-start gap-3 shadow-sm">
+                <i class="fas fa-triangle-exclamation text-amber-600 text-lg mt-0.5"></i>
+                <div>
+                    <h4 class="font-bold text-amber-900 text-xs">Hyper-Local Weather Advisory</h4>
+                    <p class="text-[11px] text-amber-800 mt-0.5" id="weatherAlertText">Analyzing local soil humidity and 48-hour precipitation forecasts for your coordinates...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: LIVE MANDI PRICES & MSP TRACKER -->
+        <div id="contentMandi" class="p-4 space-y-4 hidden">
+            <div>
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="font-bold text-gray-900 text-sm"><i class="fas fa-chart-line text-farmgreen mr-1.5"></i><span id="mandiTitle">Live Mandi Prices (APMC)</span></h3>
+                    <span class="text-[9px] bg-green-100 text-green-800 font-bold px-2 py-0.5 rounded">Live Feed</span>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border overflow-hidden divide-y divide-gray-100 text-xs">
+                    <div class="p-3 flex justify-between items-center">
+                        <div><strong>Tomato (Local)</strong><p class="text-[10px] text-gray-400">Modal Rate</p></div>
+                        <div class="text-right"><strong class="text-farmgreen text-sm">₹1,000 / Qtl</strong><span class="block text-[9px] text-gray-400">₹10 / kg</span></div>
+                    </div>
+                    <div class="p-3 flex justify-between items-center">
+                        <div><strong>Potato</strong><p class="text-[10px] text-gray-400">Modal Rate</p></div>
+                        <div class="text-right"><strong class="text-farmgreen text-sm">₹1,700 / Qtl</strong><span class="block text-[9px] text-gray-400">₹17 / kg</span></div>
+                    </div>
+                    <div class="p-3 flex justify-between items-center">
+                        <div><strong>Capsicum</strong><p class="text-[10px] text-gray-400">Modal Rate</p></div>
+                        <div class="text-right"><strong class="text-farmgreen text-sm">₹2,300 / Qtl</strong><span class="block text-[9px] text-gray-400">₹23 / kg</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="font-bold text-gray-900 text-sm"><i class="fas fa-shield-alt text-blue-600 mr-1.5"></i>Central MSP Tracker (Baseline)</h3>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border overflow-hidden text-xs">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-gray-100 text-gray-700 border-b">
+                                <th class="p-2.5 font-bold">Crop</th>
+                                <th class="p-2.5 font-bold">Season</th>
+                                <th class="p-2.5 font-bold text-right">MSP (₹/Quintal)</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            <tr>
+                                <td class="p-2.5 font-medium">Paddy (Common)</td>
+                                <td class="p-2.5 text-gray-500">Kharif</td>
+                                <td class="p-2.5 text-right font-bold text-farmgreen">₹2,441</td>
+                            </tr>
+                            <tr>
+                                <td class="p-2.5 font-medium">Ragi (Nachni)</td>
+                                <td class="p-2.5 text-gray-500">Kharif</td>
+                                <td class="p-2.5 text-right font-bold text-farmgreen">₹5,205</td>
+                            </tr>
+                            <tr>
+                                <td class="p-2.5 font-medium">Tur (Arhar)</td>
+                                <td class="p-2.5 text-gray-500">Kharif</td>
+                                <td class="p-2.5 text-right font-bold text-farmgreen">₹8,450</td>
+                            </tr>
+                            <tr>
+                                <td class="p-2.5 font-medium">Wheat</td>
+                                <td class="p-2.5 text-gray-500">Rabi</td>
+                                <td class="p-2.5 text-right font-bold text-farmgreen">₹2,610</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: AI DISEASE REMEDY & ADVISORY -->
+        <div id="contentAi" class="p-4 space-y-4 hidden">
+            <div class="bg-white p-4 rounded-2xl shadow-sm border space-y-3">
+                <h3 class="font-bold text-gray-900 text-sm"><i class="fas fa-camera-retro text-farmgreen mr-2"></i>AI Crop Disease & Blight Scanner</h3>
+                <p class="text-xs text-gray-500">Snap or upload a photo of your diseased leaf, crop stem, or sick livestock to instantly diagnose the blight.</p>
+                
+                <div class="border-2 border-dashed border-gray-300 rounded-xl p-5 text-center bg-gray-50">
+                    <input type="file" id="diseasePhoto" accept="image/*" class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-green-50 file:text-farmgreen font-bold cursor-pointer" onchange="simulateAiDiagnosis(event)">
+                </div>
+
+                <div id="aiResultBox" class="hidden bg-green-50 border border-green-200 p-3.5 rounded-xl space-y-2">
+                    <div class="flex items-center text-green-800 font-bold text-xs">
+                        <i class="fas fa-robot text-base mr-2"></i> Diagnosis: Early Blight Detected (Alternaria solani)
+                    </div>
+                    <p class="text-xs text-green-700">Recommended Remedy: Spray Copper Oxychloride (50% WP) @ 3g per liter of water.</p>
+                    <a href="supplier-store.html" class="inline-block bg-farmgreen text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm mt-1">
+                        <i class="fas fa-shopping-cart mr-1"></i> Buy Remedy in Inputs Store
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4: AI CROP ADVISOR (DEMAND & EXPORT RECOMMENDATIONS) -->
+        <div id="contentAdvisory" class="p-4 space-y-3 hidden">
+            <div class="bg-gradient-to-r from-emerald-800 to-green-900 text-white p-4 rounded-2xl shadow-md">
+                <h3 class="font-bold text-sm mb-1"><i class="fas fa-brain mr-1.5 text-farmyellow"></i>AI Smart Crop Advisor</h3>
+                <p class="text-[11px] text-green-100">Analyzed via live web demand feeds & local GPS soil profile.</p>
+            </div>
+
+            <div class="space-y-3">
+                <div class="bg-white p-4 rounded-xl shadow-sm border space-y-2">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <span class="text-[9px] bg-purple-100 text-purple-800 font-bold px-2 py-0.5 rounded uppercase">High Export Demand</span>
+                            <h4 class="font-bold text-gray-900 text-base mt-1">Alphonso & Banana</h4>
+                        </div>
+                        <span class="text-xs font-bold text-farmgreen bg-green-50 px-2 py-1 rounded">High Profit</span>
+                    </div>
+                    <p class="text-xs text-gray-600">Global export orders for organic mangoes and robusta bananas have surged by 34% this quarter in your region.</p>
+                </div>
+
+                <div class="bg-white p-4 rounded-xl shadow-sm border space-y-2">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <span class="text-[9px] bg-blue-100 text-blue-800 font-bold px-2 py-0.5 rounded uppercase">Local Mandi Shortage</span>
+                            <h4 class="font-bold text-gray-900 text-base mt-1">Yellow Capsicum & Exotic Greens</h4>
+                        </div>
+                        <span class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded">Best to Sowing Now</span>
+                    </div>
+                    <p class="text-xs text-gray-600">Current local market price trends show high deficit in colored capsicum. Sowing now guarantees strong wholesale returns.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 5: GOVERNMENT SCHEMES BOARD -->
+        <div id="contentSchemes" class="p-4 space-y-3 hidden">
+            <h3 class="font-bold text-gray-900 text-sm mb-1"><i class="fas fa-award text-amber-500 mr-2"></i>Localized Schemes</h3>
+            <p class="text-[10px] text-gray-500 mb-2">Filtered based on your live GPS coordinates & land holding size.</p>
+            
+            <div class="space-y-3">
+                <div class="bg-white p-4 rounded-xl shadow-sm border space-y-1.5">
+                    <span class="text-[9px] bg-blue-100 text-blue-800 font-bold px-2 py-0.5 rounded">Central Scheme</span>
+                    <h4 class="font-bold text-gray-900 text-sm">PM-KISAN Samman Nidhi</h4>
+                    <p class="text-xs text-gray-600">Direct income support of ₹6,000/year to landholding farmer families in 3 equal installments.</p>
+                    <a href="https://pmkisan.gov.in" target="_blank" class="text-xs text-blue-600 font-bold inline-block mt-1">Check Status <i class="fas fa-external-link-alt ml-0.5"></i></a>
+                </div>
+
+                <div class="bg-white p-4 rounded-xl shadow-sm border space-y-1.5">
+                    <span class="text-[9px] bg-green-100 text-green-800 font-bold px-2 py-0.5 rounded">State Scheme</span>
+                    <h4 class="font-bold text-gray-900 text-sm">Pradhan Mantri Fasal Bima Yojana</h4>
+                    <p class="text-xs text-gray-600">Comprehensive crop insurance coverage against natural disasters, storm, hail, and pest attacks.</p>
+                    <a href="https://pmfby.gov.in" target="_blank" class="text-xs text-green-600 font-bold inline-block mt-1">Apply for Coverage <i class="fas fa-external-link-alt ml-0.5"></i></a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script & Multi-Language Engine -->
+    <script>
+        const translations = {
+            en: { hub_title: "Knowledge & Community Hub" },
+            hi: { hub_title: "ज्ञान और सामुदायिक केंद्र" },
+            kn: { hub_title: "ಜ್ಞಾನ ಮತ್ತು ಸಮುದಾಯ ಕೇಂದ್ರ" }
+        };
+
+        function changeLanguage(langCode) {
+            localStorage.setItem('frendzy_lang', langCode);
+            if(document.getElementById('langSwitcher')) document.getElementById('langSwitcher').value = langCode;
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (translations[langCode] && translations[langCode][key]) el.innerText = translations[langCode][key];
+            });
+        }
+        document.addEventListener("DOMContentLoaded", () => { 
+            changeLanguage(localStorage.getItem('frendzy_lang') || 'en');
+            detectUserLocation();
+        });
+
+        function detectUserLocation() {
+            if (!navigator.geolocation) {
+                document.getElementById('districtSubtitle').innerHTML = `<i class="fas fa-map-marker-alt mr-1"></i>GPS Not Supported`;
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(async (pos) => {
+                const lat = pos.coords.latitude;
+                const lng = pos.coords.longitude;
+                try {
+                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+                    const data = await res.json();
+                    const district = data.address.state_district || data.address.county || data.address.city || "Local District";
+                    const state = data.address.state || "Region";
+                    
+                    document.getElementById('districtSubtitle').innerHTML = `<i class="fas fa-map-marker-alt mr-1"></i>${district}, ${state} (GPS Active)`;
+                    document.getElementById('weatherLocation').innerText = `${district} Weather Radar`;
+                    document.getElementById('mandiTitle').innerText = `Live Mandi Prices (${district} APMC)`;
+                    document.getElementById('weatherAlertText').innerText = `Favorable wind and soil conditions detected in ${district}. No major storm warnings for the next 48 hours.`;
+                } catch(e) {
+                    document.getElementById('districtSubtitle').innerHTML = `<i class="fas fa-map-marker-alt mr-1"></i>GPS Pinned (${lat.toFixed(2)}, ${lng.toFixed(2)})`;
+                    document.getElementById('weatherAlertText').innerText = `Hyper-local weather sync active for pinned GPS coordinates.`;
+                }
+            }, () => {
+                document.getElementById('districtSubtitle').innerHTML = `<i class="fas fa-map-marker-alt mr-1"></i>Location permission denied (Default Region)`;
+                document.getElementById('weatherAlertText').innerText = `Please enable GPS permissions for precise hyper-local weather alerts.`;
+            });
+        }
+
+        function switchTab(tabName) {
+            const tabs = ['weather', 'mandi', 'ai', 'advisory', 'schemes'];
+            tabs.forEach(t => {
+                const content = document.getElementById(`content${t.charAt(0).toUpperCase() + t.slice(1)}`);
+                const btn = document.getElementById(`tab${t.charAt(0).toUpperCase() + t.slice(1)}`);
+                if(t === tabName) {
+                    content.classList.remove('hidden');
+                    content.classList.add('block');
+                    btn.className = "flex-1 py-2 text-xs font-bold bg-farmgreen text-white rounded-lg shadow-sm transition";
+                } else {
+                    content.classList.add('hidden');
+                    content.classList.remove('block');
+                    btn.className = "flex-1 py-2 text-xs font-bold text-gray-600 rounded-lg transition";
+                }
+            });
+        }
+
+        function simulateAiDiagnosis(event) {
+            if(event.target.files && event.target.files[0]) {
+                document.getElementById('aiResultBox').classList.remove('hidden');
+            }
+        }
+    </script>
+</body>
+</html>

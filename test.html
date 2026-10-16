@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Frendzy - Database Test</title>
+</head>
+<body style="font-family: Arial; padding: 50px; text-align: center;">
+
+    <h2>Frendzy Farmers Backend Test</h2>
+    <p>Click the button below to send a fake crop to your live MongoDB database.</p>
+    
+    <button onclick="sendCrop()" style="padding: 15px 30px; background-color: #16a34a; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; font-weight: bold;">
+        Send Test Crop to Cloud
+    </button>
+
+    <p id="status" style="margin-top: 20px; font-weight: bold; color: blue;"></p>
+
+    <script>
+        async function sendCrop() {
+            document.getElementById('status').innerText = "Sending to server...";
+            
+            try {
+                // This talks to the POST endpoint in your server.js file
+                const response = await fetch('http://localhost:3000/api/crops/voice-listing', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        crop_name: "Organic Red Apples",
+                        yield_kg: 500,
+                        price: 120,
+                        lat: 12.9716, // Bengaluru Latitude
+                        lng: 77.5946  // Bengaluru Longitude
+                    })
+                });
+
+                const data = await response.json();
+                document.getElementById('status').innerText = "✅ " + data.message;
+                
+            } catch (error) {
+                document.getElementById('status').innerText = "❌ Error connecting to server!";
+            }
+        }
+    </script>
+</body>
+</html>
