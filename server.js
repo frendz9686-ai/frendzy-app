@@ -1,4 +1,4 @@
-// server.js - Frendzy Core Backend API
+// server.js - Frendzy Core Backend API (Vercel Serverless Version)
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -42,7 +42,7 @@ const CategorySchema = new mongoose.Schema({
     bg: { type: String, default: 'bg-green-50' },
     created_at: { type: Date, default: Date.now }
 });
-const Category = mongoose.model('Category', CategorySchema);
+const Category = mongoose.models.Category || mongoose.model('Category', CategorySchema);
 
 const cropSchema = new mongoose.Schema({
     listing_id: String,
@@ -72,7 +72,7 @@ const cropSchema = new mongoose.Schema({
     farmer_phone: String
 });
 cropSchema.index({ location: '2dsphere' });
-const Crop = mongoose.model('Crop', cropSchema);
+const Crop = mongoose.models.Crop || mongoose.model('Crop', cropSchema);
 
 const supplierSchema = new mongoose.Schema({
     shop_name: String,
@@ -86,7 +86,7 @@ const supplierSchema = new mongoose.Schema({
     payment_options: [String],
     createdAt: { type: Date, default: Date.now }
 });
-const Supplier = mongoose.model('Supplier', supplierSchema);
+const Supplier = mongoose.models.Supplier || mongoose.model('Supplier', supplierSchema);
 
 const inputSchema = new mongoose.Schema({
     product_name: String,
@@ -99,7 +99,7 @@ const inputSchema = new mongoose.Schema({
     is_organic: { type: Boolean, default: false },
     quantity: { type: Number, default: 0 } 
 });
-const AgriInput = mongoose.model('AgriInput', inputSchema);
+const AgriInput = mongoose.models.AgriInput || mongoose.model('AgriInput', inputSchema);
 
 const orderSchema = new mongoose.Schema({
     status: { type: String, default: 'Pending' }, 
@@ -117,7 +117,7 @@ const orderSchema = new mongoose.Schema({
     quantity: Number,
     supplier_phone: String
 });
-const Order = mongoose.model('Order', orderSchema);
+const Order = mongoose.models.Order || mongoose.model('Order', orderSchema);
 
 const DriverSchema = new mongoose.Schema({
     name: { type: String, required: true },
@@ -129,7 +129,7 @@ const DriverSchema = new mongoose.Schema({
     rc_photo: { type: String },
     pin: { type: String, required: true }
 });
-const Driver = mongoose.model('Driver', DriverSchema);
+const Driver = mongoose.models.Driver || mongoose.model('Driver', DriverSchema);
 
 // 🚜 Machinery Schema & Model
 const MachinerySchema = new mongoose.Schema({
@@ -141,7 +141,7 @@ const MachinerySchema = new mongoose.Schema({
     image_url: { type: String },
     created_at: { type: Date, default: Date.now }
 });
-const Machinery = mongoose.model('Machinery', MachinerySchema);
+const Machinery = mongoose.models.Machinery || mongoose.model('Machinery', MachinerySchema);
 
 // 🚜 Machinery Booking Schema & Model
 const MachineryBookingSchema = new mongoose.Schema({
@@ -154,7 +154,7 @@ const MachineryBookingSchema = new mongoose.Schema({
     status: { type: String, default: 'PENDING' },
     created_at: { type: Date, default: Date.now }
 });
-const MachineryBooking = mongoose.model('MachineryBooking', MachineryBookingSchema);
+const MachineryBooking = mongoose.models.MachineryBooking || mongoose.model('MachineryBooking', MachineryBookingSchema);
 
 // 🚚 Logistics Booking Schema & Model
 const LogisticsBookingSchema = new mongoose.Schema({
@@ -169,11 +169,41 @@ const LogisticsBookingSchema = new mongoose.Schema({
     driver_phone: { type: String, default: null },
     created_at: { type: Date, default: Date.now }
 });
-const LogisticsBooking = mongoose.model('LogisticsBooking', LogisticsBookingSchema);
+const LogisticsBooking = mongoose.models.LogisticsBooking || mongoose.model('LogisticsBooking', LogisticsBookingSchema);
 
 
 // ==========================================
-// 3. API ROUTES
+// 3. DATABASE CONNECTION MIDDLEWARE (Vercel Optimized)
+// ==========================================
+const MONGO_URI = process.env.MONGO_URI;
+
+async function connectDB() {
+    if (mongoose.connection.readyState >= 1) {
+        return;
+    }
+    if (!MONGO_URI) {
+        throw new Error('Please define the MONGO_URI environment variable');
+    }
+    await mongoose.connect(MONGO_URI, {
+        serverSelectionTimeoutMS: 5000,
+    });
+    console.log('✅ Connected to Frendzy Database');
+}
+
+// Automatically connect before any route handles a request
+app.use(async (req, res, next) => {
+    try {
+        await connectDB();
+        next();
+    } catch (err) {
+        console.error('Database connection error:', err);
+        res.status(500).json({ error: 'Database connection failed' });
+    }
+});
+
+
+// ==========================================
+// 4. API ROUTES
 // ==========================================
 
 // --- ADMIN: GLOBAL CATEGORIES (GET, POST, DELETE) ---
@@ -459,16 +489,14 @@ app.patch('/api/logistics/:id/accept', async (req, res) => {
 });
 
 // ==========================================
-// 4. SERVER IGNITION
+// 5. LOCAL DEV FALLBACK & VERCEL EXPORT
 // ==========================================
-// server.js - Frendzy Core Backend API
-// (Ensure your connection block looks like this)
-const PORT = process.env.PORT || 3000;
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/frendzy';
+if (process.env.NODE_ENV !== 'production') {
+    const PORT = process.env.PORT || 3000;
+    connectDB().then(() => {
+        app.listen(PORT, () => console.log(`🚜 Server running locally on port ${PORT}`));
+    });
+}
 
-mongoose.connect(MONGO_URI)
-    .then(() => {
-        console.log('✅ Connected to Frendzy Database');
-        app.listen(PORT, () => console.log(`🚜 Server running on port ${PORT}`));
-    })
-    .catch(err => console.error('DB error:', err));
+// Export app for Vercel Serverless Functions
+module.exports = app;
