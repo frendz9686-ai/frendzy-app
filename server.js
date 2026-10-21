@@ -206,6 +206,11 @@ app.use(async (req, res, next) => {
 // 4. API ROUTES
 // ==========================================
 
+// --- ROOT CHECK ROUTE ---
+app.get('/', (req, res) => {
+    res.json({ message: "Frendzy Backend API is running successfully!" });
+});
+
 // --- ADMIN: GLOBAL CATEGORIES (GET, POST, DELETE) ---
 app.get('/api/admin/categories', async (req, res) => {
     try {
